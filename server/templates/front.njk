@@ -1,23 +1,23 @@
-{% extends "base.html" %}
+{% extends "base.njk" %}
 {% block title %}{{ issue.heading }} · The Dev Daily{% endblock %}
 {% block body %}
 <div class="spread">
   <aside class="rail" aria-label="In this edition">
     <span class="brush">In this edition</span>
-    {% include "partials/contents.html" %}
+    {% include "partials/contents.njk" %}
     <div class="quick">
       <span class="brush">Quick links</span>
       <nav class="contents" aria-label="Quick links">
         <a class="contents-link" href="/archive"><span class="ico" aria-hidden="true">▤</span>All Editions</a>
       </nav>
     </div>
-    <img class="coffee" src="{{ url_for('static', filename='img/coffee.jpeg') }}" alt="">
+    <img class="coffee" src="/static/img/coffee.jpeg" alt="">
   </aside>
   <main class="spread-main">
-    {% if toc %}
+    {% if toc.length %}
     <details class="mobile-toc">
       <summary>Table of Contents</summary>
-      {% include "partials/contents.html" %}
+      {% include "partials/contents.njk" %}
     </details>
     {% endif %}
     <div class="heading-rule" id="top"><span class="brush">Top Story</span></div>
@@ -38,7 +38,7 @@
       </div>
     </article>
     {% endif %}
-    {% if secondary %}
+    {% if secondary.length %}
     <div class="side-stories">
       {% for item in secondary %}
       <article class="story" id="story-{{ item.story.slug }}">
@@ -55,10 +55,10 @@
       {% endfor %}
     </div>
     {% endif %}
-    {% if not issue.stories %}
+    {% if not issue.stories.length %}
     <p class="empty-note">No stories made it into this edition.</p>
     {% endif %}
-    {% if roundup or filter_note %}
+    {% if roundup.length or filter_note %}
     <section class="roundup" id="roundup" aria-label="The Roundup at a Glance">
       <div class="heading-rule"><span class="brush">The Roundup at a Glance</span></div>
       {% if filter_note %}
@@ -78,7 +78,7 @@
         <span class="go" aria-hidden="true">↗</span>
       </a>
       {% endfor %}
-      {% if not roundup %}
+      {% if not roundup.length %}
       <p class="empty-note">Everything in {{ filter_note.label }} is featured above.</p>
       {% endif %}
     </section>

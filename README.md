@@ -12,17 +12,15 @@ in a desktop browser or on your phone — no database, no CMS, no rebuild.
 
 ## Quick start (Windows, local testing)
 
-Requires Python 3.12+.
+Requires Node.js 20+ (22 recommended).
 
 ```powershell
 # one-time setup (from your clone of this repo)
 cd path\to\thedevdaily
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
+npm install
 
 # start the paper (localhost only)
-python run.py
+npm start
 ```
 
 Open <http://127.0.0.1:8787/> — you'll see the bundled sample issue.
@@ -30,9 +28,9 @@ Open <http://127.0.0.1:8787/> — you'll see the bundled sample issue.
 Useful variants:
 
 ```powershell
-python run.py --port 9000                          # different port
-python run.py --editions D:\briefings\editions     # different content folder
-python run.py --host 0.0.0.0                       # reachable from the home LAN
+node server.js --port 9000                          # different port
+node server.js --editions D:\briefings\editions     # different content folder
+node server.js --host 0.0.0.0                       # reachable from the home LAN
 ```
 
 Settings come from CLI flags first, then environment variables
@@ -204,9 +202,7 @@ every run.
 ## Tests
 
 ```powershell
-.\.venv\Scripts\Activate.ps1
-pip install pytest
-python -m pytest tests/ -q
+npm test
 ```
 
 Covers parsing (wrapped summaries, code fences, featured selection, duplicate
@@ -216,18 +212,19 @@ security rules above.
 ## Project structure
 
 ```
-run.py                  start the server (Windows/Linux)
-devdaily/               the Flask app
-  parsing.py            frontmatter + structural Markdown parsing
-  rendering.py          Markdown rendering, URL schemes, media resolution
-  library.py            content-folder scanner with mtime cache
-  routes.py             pages + /media + /healthz
-  templates/            Jinja templates (front, article, archive, notices)
+server.js               start the server (Windows/Linux)
+server/                 the Express app
+  parsing.js            frontmatter + structural Markdown parsing
+  rendering.js          Markdown rendering, URL schemes, media resolution
+  library.js            content-folder scanner with mtime cache
+  routes.js             pages + /media + /healthz
+  app.js                Express app factory
+  templates/            Nunjucks templates (front, article, archive, notices)
   static/css/paper.css  all styling; design tokens in :root
   static/fonts/         bundled Fraunces (OFL) + license
   static/img/           newspaper artwork (controller, coffee, paper grain)
 editions/               your content (bundled sample 2026-11-06 included)
-tests/                  pytest suite
+tests/                  node:test suite
 Dockerfile              Linux container for the home server
 docker-compose.yml      one-command deployment
 ```

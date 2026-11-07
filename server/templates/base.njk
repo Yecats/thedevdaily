@@ -4,8 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{% block title %}The Dev Daily{% endblock %}</title>
-<link rel="icon" type="image/jpeg" href="{{ url_for('static', filename='img/controller.jpeg') }}">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/paper.css') }}">
+<link rel="icon" type="image/jpeg" href="/static/img/controller.jpeg">
+<link rel="stylesheet" href="/static/css/paper.css">
 </head>
 <body>
 <a class="skip-link" href="#paper-body">Skip to the paper</a>
@@ -18,7 +18,7 @@
       </nav>
     </div>
     <header class="mast">
-      <img class="controller" src="{{ url_for('static', filename='img/controller.jpeg') }}" alt="">
+      <img class="controller" src="/static/img/controller.jpeg" alt="">
       <div class="mast-center">
         <h1 class="masthead">The Dev Daily</h1>
         <div class="underline"></div>
@@ -28,7 +28,7 @@
     </header>
     {% if date_long %}
     <div class="edition-line">
-      <span>Edition #{{ '%03d' | format(edition_number) }}</span>
+      <span>Edition #{{ edition_number_padded }}</span>
       <time datetime="{{ date_iso }}">{{ date_long }}</time>
       <span class="local">Local network edition</span>
     </div>

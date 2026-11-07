@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends "base.njk" %}
 {% block title %}All Editions · The Dev Daily{% endblock %}
 {% block body %}
 <section class="panel">
@@ -9,16 +9,16 @@
     <span class="ico" aria-hidden="true">▤</span>
     <span class="issue-main">
       <strong>{{ row.label }}</strong>
-      Edition #{{ '%03d' | format(row.number) }} ·
+      Edition #{{ row.number_padded }} ·
       {{ row.story_count }} stor{{ 'y' if row.story_count == 1 else 'ies' }}
     </span>
     <span class="go" aria-hidden="true">›</span>
   </a>
   {% endfor %}
-  {% if not rows %}
+  {% if not rows.length %}
   <p class="empty-note">No editions have been published yet.</p>
   {% endif %}
-  {% if broken %}
+  {% if broken.length %}
   <div class="broken-files">
     <h3>Couldn't read these files</h3>
     <ul>

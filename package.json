@@ -1,0 +1,20 @@
+{
+  "name": "the-dev-daily",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Local-network newspaper for AI-curated dev news, served from a folder of Markdown editions.",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test \"tests/**/*.test.js\""
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "js-yaml": "^4.1.0",
+    "markdown-it": "^14.1.0",
+    "nunjucks": "^3.2.4"
+  }
+}

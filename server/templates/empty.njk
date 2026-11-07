@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends "base.njk" %}
 {% block title %}No editions yet · The Dev Daily{% endblock %}
 {% block body %}
 <section class="panel notice">
@@ -15,7 +15,7 @@
       <li><code>editions/2026-11-06.md</code> — the issue itself</li>
       <li><code>editions/images/2026-11-06/</code> — its images</li>
     </ul>
-    {% if broken %}
+    {% if broken.length %}
     <h3>Files that couldn't be read</h3>
     <ul>
       {% for item in broken %}

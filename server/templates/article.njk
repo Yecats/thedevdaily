@@ -1,8 +1,8 @@
-{% extends "base.html" %}
+{% extends "base.njk" %}
 {% block title %}{{ story.title }} · The Dev Daily{% endblock %}
 {% block body %}
 <article class="panel">
-  <a class="back" href="/issue/{{ issue.date.isoformat() }}">← Back to edition</a>
+  <a class="back" href="/issue/{{ issue.dateIso }}">← Back to edition</a>
   <div class="article-section"><span class="ico" aria-hidden="true">{{ icon }}</span>{{ story.section }}</div>
   {% if image %}
   <figure class="article-figure">
@@ -15,7 +15,7 @@
   <h2 class="article-title">{{ story.title }}</h2>
   <p class="meta"><strong>{{ news_date }}{% if story.availability %} · {{ story.availability }}{% endif %}</strong></p>
   {% if story.summary %}<p class="article-summary">{{ story.summary }}</p>{% endif %}
-  {% if story.tags %}
+  {% if story.tags.length %}
   <div class="tagrow">
     {% for tag in story.tags %}<span class="tag">{{ tag }}</span>{% endfor %}
   </div>
@@ -23,7 +23,7 @@
   {% if preamble_html %}
   <div class="article-copy">{{ preamble_html | safe }}</div>
   {% endif %}
-  {% if sections %}
+  {% if sections.length %}
   <div class="article-copy">
     {% for section in sections %}
     <section>
