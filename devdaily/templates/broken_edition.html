@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}{{ item.filename }} couldn't be read · The Dev Daily{% endblock %}
+{% block body %}
+<section class="panel notice">
+  <a class="back" href="/archive">← Back to all editions</a>
+  <div class="heading-rule"><span class="brush">Press delay</span></div>
+  <h2>This edition couldn't be set</h2>
+  <p class="lede">
+    The file <code>{{ item.filename }}</code> was found, but it couldn't be
+    turned into an issue, so it has been left out of the paper.
+  </p>
+  <div class="notice-box">
+    <h3>What went wrong</h3>
+    <p>{{ item.reason }}</p>
+  </div>
+  <div class="notice-actions">
+    <a class="tool-link" href="/archive">▤ All Editions</a>
+    <a class="tool-link" href="/">⌂ Latest edition</a>
+  </div>
+</section>
+{% endblock %}

@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}The Dev Daily{% endblock %}</title>
+<link rel="icon" type="image/jpeg" href="{{ url_for('static', filename='img/controller.jpeg') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/paper.css') }}">
+</head>
+<body>
+<a class="skip-link" href="#paper-body">Skip to the paper</a>
+<div class="page">
+  <section class="paper" aria-label="The Dev Daily newspaper">
+    <div class="toolbar">
+      <span class="brand">What Up Games</span>
+      <nav class="tools" aria-label="Site">
+        <a class="tool-link" href="/archive">All editions ↗</a>
+      </nav>
+    </div>
+    <header class="mast">
+      <img class="controller" src="{{ url_for('static', filename='img/controller.jpeg') }}" alt="">
+      <div class="mast-center">
+        <h1 class="masthead">The Dev Daily</h1>
+        <div class="underline"></div>
+        <p class="topics">Game Dev • AI Tools • 3D Creation • Unity • More</p>
+      </div>
+      <span class="stamp">A Creator<br>Tools<br>Roundup</span>
+    </header>
+    {% if date_long %}
+    <div class="edition-line">
+      <span>Edition #{{ '%03d' | format(edition_number) }}</span>
+      <time datetime="{{ date_iso }}">{{ date_long }}</time>
+      <span class="local">Local network edition</span>
+    </div>
+    {% endif %}
+    <div class="paper-body" id="paper-body">
+      {% block body %}{% endblock %}
+    </div>
+  </section>
+  <footer class="site-foot">The Dev Daily · What Up Games · served on your local network</footer>
+</div>
+</body>
+</html>

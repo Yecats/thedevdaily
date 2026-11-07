@@ -1,0 +1,7 @@
+<nav class="contents" aria-label="Table of contents">
+  {% for entry in toc %}
+  <a class="contents-link{% if entry.active %} selected{% endif %}" href="{{ entry.url }}"{% if entry.active %} aria-current="true"{% endif %}>
+    <span class="ico" aria-hidden="true">{{ entry.icon }}</span>{{ entry.label }}{% if entry.count %}<span class="count" aria-label="{{ entry.count }} stories">{{ entry.count }}</span>{% endif %}
+  </a>
+  {% endfor %}
+</nav>

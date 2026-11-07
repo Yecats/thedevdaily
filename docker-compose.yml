@@ -1,0 +1,13 @@
+# The Dev Daily on a home server: reads ./editions from the host, read-only.
+# Start:  docker compose up -d --build
+# Stop:   docker compose down
+services:
+  devdaily:
+    build: .
+    image: devdaily:latest
+    container_name: devdaily
+    ports:
+      - "8787:8787"
+    volumes:
+      - ./editions:/data/editions:ro
+    restart: unless-stopped

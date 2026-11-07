@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}{{ story.title }} · The Dev Daily{% endblock %}
+{% block body %}
+<article class="panel">
+  <a class="back" href="/issue/{{ issue.date.isoformat() }}">← Back to edition</a>
+  <div class="article-section"><span class="ico" aria-hidden="true">{{ icon }}</span>{{ story.section }}</div>
+  {% if image %}
+  <figure class="article-figure">
+    <img class="article-image" src="{{ image }}" alt="{{ story.image_alt }}">
+    {% if credit_html %}<figcaption class="credit">{{ credit_html | safe }}</figcaption>{% endif %}
+  </figure>
+  {% elif credit_html %}
+  <p class="credit">{{ credit_html | safe }}</p>
+  {% endif %}
+  <h2 class="article-title">{{ story.title }}</h2>
+  <p class="meta"><strong>{{ news_date }}{% if story.availability %} · {{ story.availability }}{% endif %}</strong></p>
+  {% if story.summary %}<p class="article-summary">{{ story.summary }}</p>{% endif %}
+  {% if story.tags %}
+  <div class="tagrow">
+    {% for tag in story.tags %}<span class="tag">{{ tag }}</span>{% endfor %}
+  </div>
+  {% endif %}
+  {% if preamble_html %}
+  <div class="article-copy">{{ preamble_html | safe }}</div>
+  {% endif %}
+  {% if sections %}
+  <div class="article-copy">
+    {% for section in sections %}
+    <section>
+      <h3>{{ section.heading }}</h3>
+      {{ section.html | safe }}
+    </section>
+    {% endfor %}
+  </div>
+  {% endif %}
+</article>
+{% endblock %}

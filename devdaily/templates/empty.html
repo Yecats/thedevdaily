@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}No editions yet · The Dev Daily{% endblock %}
+{% block body %}
+<section class="panel notice">
+  <div class="heading-rule"><span class="brush">Fresh off the presses</span></div>
+  <h2>The paperboy hasn't delivered yet</h2>
+  <p class="lede">
+    No editions were found in the configured editions folder. Drop a Markdown
+    briefing named <code>YYYY-MM-DD.md</code> in there (matching the edition
+    template) and refresh this page — no restart needed.
+  </p>
+  <div class="notice-box">
+    <h3>Expected layout</h3>
+    <ul>
+      <li><code>editions/2026-11-06.md</code> — the issue itself</li>
+      <li><code>editions/images/2026-11-06/</code> — its images</li>
+    </ul>
+    {% if broken %}
+    <h3>Files that couldn't be read</h3>
+    <ul>
+      {% for item in broken %}
+      <li><strong>{{ item.filename }}</strong> — {{ item.reason }}</li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

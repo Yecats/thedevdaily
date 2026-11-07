@@ -1,0 +1,14 @@
+# Keep the image small; content and development material are not part of it.
+.git
+.gitignore
+.dockerignore
+Dockerfile
+docker-compose.yml
+README.md
+EDITION_TEMPLATE.md
+LICENSE
+tests
+editions
+**/__pycache__
+**/.pytest_cache
+*.log

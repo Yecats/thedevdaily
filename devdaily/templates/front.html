@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block title %}{{ issue.heading }} · The Dev Daily{% endblock %}
+{% block body %}
+<div class="spread">
+  <aside class="rail" aria-label="In this edition">
+    <span class="brush">In this edition</span>
+    {% include "partials/contents.html" %}
+    <div class="quick">
+      <span class="brush">Quick links</span>
+      <nav class="contents" aria-label="Quick links">
+        <a class="contents-link" href="/archive"><span class="ico" aria-hidden="true">▤</span>All Editions</a>
+      </nav>
+    </div>
+    <img class="coffee" src="{{ url_for('static', filename='img/coffee.jpeg') }}" alt="">
+  </aside>
+  <main class="spread-main">
+    {% if toc %}
+    <details class="mobile-toc">
+      <summary>Table of Contents</summary>
+      {% include "partials/contents.html" %}
+    </details>
+    {% endif %}
+    <div class="heading-rule" id="top"><span class="brush">Top Story</span></div>
+    {% if featured %}
+    <article class="lead{% if not featured.image %} no-image{% endif %}" id="story-{{ featured.story.slug }}">
+      {% if featured.image %}
+      <figure class="lead-figure">
+        <a href="{{ featured.url }}"><img src="{{ featured.image }}" alt="{{ featured.story.image_alt }}"></a>
+      </figure>
+      {% endif %}
+      <div class="lead-copy">
+        <h2><a href="{{ featured.url }}">{{ featured.story.title }}</a></h2>
+        {% if featured.story.summary %}<p class="summary">{{ featured.story.summary }}</p>{% endif %}
+        <div class="tagrow">
+          {% for tag in featured.story.tags %}<span class="tag">{{ tag }}</span>{% endfor %}
+          <a class="read" href="{{ featured.url }}" aria-label="Read more about {{ featured.story.title }}">↗ Read More</a>
+        </div>
+      </div>
+    </article>
+    {% endif %}
+    {% if secondary %}
+    <div class="side-stories">
+      {% for item in secondary %}
+      <article class="story" id="story-{{ item.story.slug }}">
+        {% if item.image %}
+        <a class="story-figure" href="{{ item.url }}"><img src="{{ item.image }}" alt="{{ item.story.image_alt }}"></a>
+        {% endif %}
+        <h2><a href="{{ item.url }}">{{ item.story.title }}</a></h2>
+        {% if item.story.summary %}<p class="summary">{{ item.story.summary }}</p>{% endif %}
+        <div class="tagrow">
+          {% for tag in item.story.tags %}<span class="tag">{{ tag }}</span>{% endfor %}
+          <a class="read" href="{{ item.url }}" aria-label="Read more about {{ item.story.title }}">↗ Read More</a>
+        </div>
+      </article>
+      {% endfor %}
+    </div>
+    {% endif %}
+    {% if not issue.stories %}
+    <p class="empty-note">No stories made it into this edition.</p>
+    {% endif %}
+    {% if roundup or filter_note %}
+    <section class="roundup" id="roundup" aria-label="The Roundup at a Glance">
+      <div class="heading-rule"><span class="brush">The Roundup at a Glance</span></div>
+      {% if filter_note %}
+      <p class="filter-note">
+        Showing {{ filter_note.count }} of {{ filter_note.total }} stories in
+        <strong>{{ filter_note.label }}</strong> ·
+        <a href="{{ base_url }}#roundup">Show all</a>
+      </p>
+      {% endif %}
+      {% for item in roundup %}
+      <a class="roundup-row{% if not item.image %} no-image{% endif %}" id="roundup-{{ item.story.slug }}" href="{{ item.url }}">
+        {% if item.image %}<img src="{{ item.image }}" alt="">{% endif %}
+        <span class="roundup-text">
+          <strong>{{ item.story.title }}</strong>
+          {% if item.story.summary %}<small>{{ item.story.summary }}</small>{% endif %}
+        </span>
+        <span class="go" aria-hidden="true">↗</span>
+      </a>
+      {% endfor %}
+      {% if not roundup %}
+      <p class="empty-note">Everything in {{ filter_note.label }} is featured above.</p>
+      {% endif %}
+    </section>
+    {% endif %}
+  </main>
+</div>
+{% endblock %}

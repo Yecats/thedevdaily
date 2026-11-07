@@ -40,9 +40,12 @@ issue to publish, skip the file.
 
 <!--
 Use one relevant retrieved image and credit its source. Save the local
-copy next to the issue under images/YYYY-MM-DD/. Omit both lines when no
-suitable image is available. Use the relevant news date above and explain
-multiple announcement and release dates in What changed.
+copy next to the issue under images/YYYY-MM-DD/ (preferred: keeps the
+paper readable offline and immune to rate limits). When saving a copy is
+not practical, the image src may instead be a direct https:// URL to the
+source's own announcement graphic — the app hotlinks it. Omit both lines
+when no suitable image is available. Use the relevant news date above and
+explain multiple announcement and release dates in What changed.
 -->
 
 ### About the tool
