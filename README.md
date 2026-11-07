@@ -8,6 +8,13 @@ in a desktop browser or on your phone — no database, no CMS, no rebuild.
 - **Writing contract:** [`EDITION_TEMPLATE.md`](EDITION_TEMPLATE.md) — the exact format your briefing AI must produce
 - One bundled sample issue (`editions/2026-11-06.md`) so the paper isn't empty on first run; delete it once your own first edition lands
 
+## What it looks like
+
+The front page of the bundled sample edition — lead story, secondary cards,
+and the Roundup at a Glance index:
+
+![The Dev Daily — front page of the bundled sample edition](docs/front-page.png)
+
 ---
 
 ## Quick start (Windows, local testing)

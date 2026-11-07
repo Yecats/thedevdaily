@@ -229,15 +229,35 @@ a { color: inherit; }
 
 .topics { margin: 0; }
 
+/* Postage stamp: perforated edges. Four full-coverage mask layers, each
+   carrying a row of transparent notches along one edge, combined with
+   mask-composite: intersect — the intersection leaves all four edges
+   scalloped while the center stays intact. */
 .stamp {
-  background: var(--lavender-soft);
-  clip-path: polygon(0 7%, 97% 0, 100% 93%, 5% 100%);
+  --stamp-r: 4px;
+  --stamp-d: 11px;
+  display: block;
+  width: 100%;
+  padding: 10px 6px;
+  background: #fdf6ec;
+  color: var(--plum);
   rotate: -8deg;
-  padding: 8px 4px;
   font-size: clamp(10px, 1.45cqi, 15px);
   font-weight: 850;
-  line-height: 1.15;
+  line-height: 1.2;
+  letter-spacing: .05em;
   text-transform: uppercase;
+  text-align: center;
+  box-shadow:
+    inset 0 0 0 3px #fdf6ec,
+    inset 0 0 0 4px rgb(72 48 82 / 45%);
+  filter: drop-shadow(1px 2px 2px rgb(76 48 103 / 35%));
+  mask:
+    radial-gradient(circle var(--stamp-r) at 50% 0, #0000 96%, #000) top left / var(--stamp-d) 100% repeat-x,
+    radial-gradient(circle var(--stamp-r) at 50% 100%, #0000 96%, #000) top left / var(--stamp-d) 100% repeat-x,
+    radial-gradient(circle var(--stamp-r) at 0 50%, #0000 96%, #000) top left / 100% var(--stamp-d) repeat-y,
+    radial-gradient(circle var(--stamp-r) at 100% 50%, #0000 96%, #000) top left / 100% var(--stamp-d) repeat-y;
+  mask-composite: intersect;
 }
 
 .edition-line {
