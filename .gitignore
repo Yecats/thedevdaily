@@ -15,3 +15,6 @@ desktop.ini
 
 # Local scratch
 *.log
+
+# Tooling artifacts
+.zcode/
