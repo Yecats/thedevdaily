@@ -163,6 +163,28 @@ The next browser refresh shows the new edition on the front page and in the
 archive. If a file is malformed it is never silently dropped: the archive
 lists the filename and the reason, and every other issue stays readable.
 
+### Example researcher prompt (for your AI)
+
+The repo ships a complete, ready-to-adapt researcher prompt:
+[`skills/research-daily-edition/SKILL.md`](skills/research-daily-edition/SKILL.md).
+It turns an AI agent into the end-to-end journalist — research the last 24
+hours across three beats (AI, game development, 3D printing), verify primary
+sources, download images, and publish the edition atomically.
+
+To use it:
+
+1. Copy the file into your AI tool's skills/prompts location, or paste it as
+   the system prompt for a scheduled run.
+2. Fill in the three placeholders it lists (a table at the top of the file):
+   `{{PROJECT_ROOT}}` (your clone's path), `{{APP_URL}}` (where the app is
+   served), and `{{LOCAL_TIMEZONE}}` (your IANA timezone).
+3. Run it daily — or on whatever cadence you like; the paper skips quiet days
+   on its own.
+
+Everything the AI needs to know about the file format lives in
+[`EDITION_TEMPLATE.md`](EDITION_TEMPLATE.md), which the prompt re-reads on
+every run.
+
 ## Security model
 
 - Treats AI Markdown as **content**: raw HTML is escaped, `javascript:` /
