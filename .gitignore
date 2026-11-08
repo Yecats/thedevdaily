@@ -7,6 +7,8 @@ venv/
 
 # Node
 node_modules/
+dist/
+*.staging/
 
 # OS junk
 .DS_Store
@@ -21,3 +23,4 @@ desktop.ini
 
 # Local backups
 *.bak
+/.vs/TheDevDaily

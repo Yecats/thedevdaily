@@ -111,4 +111,6 @@ stories, no data:/javascript: URLs.
 
 **After publishing, confirm the edition parses:** load the app's front page
 ({{APP_URL}}) if it's running; malformed files surface in the archive with a
-reason.
+reason. Publishing the served site is a manual `npm run build` on the host
+(the per-request preview shows a new edition without it) — do not run the
+build yourself unless asked.

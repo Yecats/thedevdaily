@@ -61,8 +61,21 @@ function isValidDate(value) {
  * `sectionFilter` (a section slug from ?section=) narrows the Roundup at a
  * Glance to that section's stories; the TOC links carry the filter as real
  * URLs so it works without JavaScript and is shareable.
+ *
+ * `sectionUrl` is optional and used by the static build (build.js): when it
+ * is a function, TOC links point at pre-built per-section pages
+ * (`/issue/<date>/section/<slug>/`) instead of `?section=` query URLs,
+ * which a static file server would ignore.
  */
-function frontContext(issue, library, root, imagesRoot, baseUrl = '/', sectionFilter = null) {
+function frontContext(
+  issue,
+  library,
+  root,
+  imagesRoot,
+  baseUrl = '/',
+  sectionFilter = null,
+  sectionUrl = null
+) {
   const featured = issue.featured;
   const secondary = issue.stories.filter((s) => s !== featured).slice(0, 2);
 
@@ -91,8 +104,9 @@ function frontContext(issue, library, root, imagesRoot, baseUrl = '/', sectionFi
     if (!entry) {
       entry = {
         label: story.section,
+        slug,
         icon: sectionIcon(),
-        url: `${baseUrl}?section=${slug}#roundup`,
+        url: `${sectionUrl ? sectionUrl(slug) : `${baseUrl}?section=${slug}`}#roundup`,
         count: 0,
         active: slug === activeSlug,
       };
@@ -142,6 +156,54 @@ function frontContext(issue, library, root, imagesRoot, baseUrl = '/', sectionFi
 // ---------------------------------------------------------------------------
 // pages
 // ---------------------------------------------------------------------------
+
+/**
+ * View-model for one story's article page. Shared by the live route and the
+ * static build so both produce identical HTML.
+ */
+function articleContext(item, story, root, imagesRoot, library) {
+  const sections = story.sections.map((section) => ({
+    heading: section.heading,
+    html: sanitizeFragment(renderBlock(section.content), root, imagesRoot),
+  }));
+  const creditHtml = story.credit
+    ? sanitizeFragment(renderInline(`*${story.credit}*`), root, imagesRoot)
+    : null;
+  const preambleHtml = story.preamble
+    ? sanitizeFragment(renderBlock(story.preamble), root, imagesRoot)
+    : null;
+
+  const editionNumber = library.editionNumber(item.date);
+  return {
+    issue: { ...item, dateIso: item.date },
+    story,
+    article_url: articleUrl(story, item.date),
+    image: storyImage(story, root, imagesRoot),
+    icon: sectionIcon(),
+    news_date: formatNewsDate(story.news_date),
+    sections,
+    credit_html: creditHtml,
+    preamble_html: preambleHtml,
+    edition_number_padded: String(editionNumber).padStart(3, '0'),
+    date_long: formatLong(item.date),
+    date_iso: item.date,
+  };
+}
+
+/** Row view-models for the archive page, newest first. */
+function archiveRows(library) {
+  return library.issues().map((issue) => {
+    const number = library.editionNumber(issue.date);
+    return {
+      issue,
+      url: `/issue/${issue.date}`,
+      label: formatLong(issue.date),
+      number,
+      number_padded: String(number).padStart(3, '0'),
+      story_count: issue.stories.length,
+    };
+  });
+}
 
 function createRouter(library, root, imagesRoot) {
   const r = express.Router();
@@ -194,47 +256,11 @@ function createRouter(library, root, imagesRoot) {
       return res.status(404).render('missing.njk');
     }
 
-    const sections = story.sections.map((section) => ({
-      heading: section.heading,
-      html: sanitizeFragment(renderBlock(section.content), root, imagesRoot),
-    }));
-    const creditHtml = story.credit
-      ? sanitizeFragment(renderInline(`*${story.credit}*`), root, imagesRoot)
-      : null;
-    const preambleHtml = story.preamble
-      ? sanitizeFragment(renderBlock(story.preamble), root, imagesRoot)
-      : null;
-
-    const editionNumber = library.editionNumber(item.date);
-    return res.render('article.njk', {
-      issue: { ...item, dateIso: item.date },
-      story,
-      article_url: articleUrl(story, item.date),
-      image: storyImage(story, root, imagesRoot),
-      icon: sectionIcon(),
-      news_date: formatNewsDate(story.news_date),
-      sections,
-      credit_html: creditHtml,
-      preamble_html: preambleHtml,
-      edition_number_padded: String(editionNumber).padStart(3, '0'),
-      date_long: formatLong(item.date),
-      date_iso: item.date,
-    });
+    return res.render('article.njk', articleContext(item, story, root, imagesRoot, library));
   });
 
   r.get('/archive', (req, res) => {
-    const rows = library.issues().map((issue) => {
-      const number = library.editionNumber(issue.date);
-      return {
-        issue,
-        url: `/issue/${issue.date}`,
-        label: formatLong(issue.date),
-        number,
-        number_padded: String(number).padStart(3, '0'),
-        story_count: issue.stories.length,
-      };
-    });
-    return res.render('archive.njk', { rows, broken: library.broken() });
+    return res.render('archive.njk', { rows: archiveRows(library), broken: library.broken() });
   });
 
   r.get('/media/*', (req, res) => {
@@ -270,4 +296,11 @@ function createRouter(library, root, imagesRoot) {
   return r;
 }
 
-module.exports = { createRouter, frontContext, sectionIcon, isValidDate };
+module.exports = {
+  createRouter,
+  frontContext,
+  articleContext,
+  archiveRows,
+  sectionIcon,
+  isValidDate,
+};

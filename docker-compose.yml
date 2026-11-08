@@ -1,13 +1,14 @@
-# The Dev Daily on a home server: reads ./editions from the host, read-only.
-# Start:  docker compose up -d --build
-# Stop:   docker compose down
+# The Dev Daily on a home server: nginx serving the ./dist static build, read-only.
+# Publish: drop the edition into ./editions, then `npm run build` on the host.
+# Start:   docker compose up -d --build   (first run; rebuild only if nginx.conf changes)
+# Stop:    docker compose down
 services:
   devdaily:
     build: .
     image: devdaily:latest
     container_name: devdaily
     ports:
-      - "8787:8787"
+      - "8787:80"
     volumes:
-      - ./editions:/data/editions:ro
+      - ./dist:/usr/share/nginx/html:ro
     restart: unless-stopped

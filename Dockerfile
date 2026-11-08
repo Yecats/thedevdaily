@@ -1,29 +1,17 @@
-# The Dev Daily — Linux container image.
+# The Dev Daily — home-server image: nginx serving the static build.
+#
+# There is no Node and no content in the image. Build the static pages on
+# the host (`npm run build`), then mount ./dist read-only — mirroring how
+# ./editions used to be mounted. Republishing an edition is another host-side
+# `npm run build`; no container rebuild or restart involved.
+#
 # Build:  docker build -t devdaily .
-# Run:    docker run -d --name devdaily -p 8787:8787 -v ./editions:/data/editions:ro devdaily
-FROM node:22-slim
+# Run:    docker run -d --name devdaily -p 8787:80 -v ./dist:/usr/share/nginx/html:ro devdaily
+FROM nginx:1.27-alpine
 
-ENV NODE_ENV=production \
-    DEVDAILY_EDITIONS=/data/editions \
-    DEVDAILY_HOST=0.0.0.0 \
-    DEVDAILY_PORT=8787
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-WORKDIR /app
-
-COPY package.json package-lock.json ./
-RUN npm ci --omit=dev
-
-COPY server ./server
-COPY server.js .
-
-# Run as an unprivileged user; the content volume is read-only anyway.
-# (the node base image ships a non-root "node" user)
-USER node
-
-VOLUME ["/data/editions"]
-EXPOSE 8787
+EXPOSE 80
 
 HEALTHCHECK --interval=30s --timeout=4s --start-period=5s \
-  CMD node -e "fetch('http://127.0.0.1:8787/healthz').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
-
-CMD ["node", "server.js"]
+  CMD wget -qO- http://127.0.0.1/healthz >/dev/null || exit 1

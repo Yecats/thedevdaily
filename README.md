@@ -2,8 +2,9 @@
 
 A local-network newspaper for AI-curated game development and creative tools
 news, published by **What Up Games**. Your briefing AI writes one Markdown
-file per edition; this app turns each file into a cute newspaper you can read
-in a desktop browser or on your phone — no database, no CMS, no rebuild.
+file per edition; a one-command build turns each file into a cute newspaper
+of static pages you can read in a desktop browser or on your phone — no
+database, no CMS, no server-side code.
 
 - **Writing contract:** [`EDITION_TEMPLATE.md`](EDITION_TEMPLATE.md) — the exact format your briefing AI must produce
 - One bundled sample issue (`editions/2026-11-06.md`) so the paper isn't empty on first run; delete it once your own first edition lands
@@ -26,8 +27,12 @@ Requires Node.js 20+ (22 recommended).
 cd path\to\thedevdaily
 npm install
 
-# start the paper (localhost only)
+# build the paper into .\dist (repeat after each new edition)
+npm run build
+
+# look at it — either the built-in preview (renders live, no build needed)…
 npm start
+# …or any static file server pointed at .\dist
 ```
 
 Open <http://127.0.0.1:8787/> — you'll see the bundled sample issue.
@@ -35,35 +40,39 @@ Open <http://127.0.0.1:8787/> — you'll see the bundled sample issue.
 Useful variants:
 
 ```powershell
-node server.js --port 9000                          # different port
-node server.js --editions D:\briefings\editions     # different content folder
-node server.js --host 0.0.0.0                       # reachable from the home LAN
+node server.js --port 9000                          # preview: different port
+node server.js --editions D:\briefings\editions     # preview: different content folder
+node server.js --host 0.0.0.0                       # preview: reachable from the home LAN
+node build.js --out D:\www\devdaily                 # build: different output folder
+node build.js --site-base TheDevDaily               # build: hosted in a subfolder (example.com/TheDevDaily/)
 ```
 
 Settings come from CLI flags first, then environment variables
 (`DEVDAILY_EDITIONS`, `DEVDAILY_HOST`, `DEVDAILY_PORT`,
-`DEVDAILY_IMAGES_DIRNAME`), then defaults (`./editions`, `127.0.0.1`, `8787`).
+`DEVDAILY_IMAGES_DIRNAME`, `DEVDAILY_OUT`), then defaults (`./editions`,
+`127.0.0.1`, `8787`, `./dist`).
 
 ## Home server (Linux container)
 
-The container reads the editions folder as a **read-only volume**, so the
-web app physically cannot modify your content.
+The site is static: build `dist/` on the host, and the container is just
+nginx serving that folder as a **read-only volume**. The image holds no Node
+and no content, so rebuilding the paper never touches the running server.
 
 ```bash
-# build + run on the server
+# on the server: build the static pages, then start nginx
+npm run build
 docker compose up -d --build
 # or without compose:
 docker build -t devdaily .
 docker run -d --name devdaily --restart unless-stopped \
-  -p 8787:8787 \
-  -v /home/you/devdaily/editions:/data/editions:ro \
+  -p 8787:80 \
+  -v /home/you/devdaily/dist:/usr/share/nginx/html:ro \
   devdaily
 ```
 
-- Inside the container the app binds `0.0.0.0:8787` (that's the container's
-  interface; use `-p` to decide what the host exposes).
-- Override any setting with the usual environment variables, e.g.
-  `docker run -e DEVDAILY_PORT=9000 -p 9000:9000 ...`.
+- Republishing an edition is a host-side `npm run build` away — no container
+  rebuild or restart. The build swaps `dist/` into place atomically, so
+  nginx never serves a half-written site.
 - Health check: `curl http://localhost:8787/healthz` → `ok`.
 - Logs: `docker logs devdaily`.
 
@@ -85,7 +94,7 @@ restrict with DOCKER-USER if you need finer control:
 
 ```bash
 # bind the publish to the server's LAN IP only
-docker run -d -p 192.168.1.10:8787:8787 -v /home/you/devdaily/editions:/data/editions:ro devdaily
+docker run -d -p 192.168.1.10:8787:80 -v /home/you/devdaily/dist:/usr/share/nginx/html:ro devdaily
 ```
 
 **Windows host (if testing LAN from Windows):**
@@ -114,9 +123,11 @@ firewall rule above exists, and the server printed its LAN URL at startup.
 ## Publishing an edition (the briefing AI's workflow)
 
 The content folder is the source of truth. The AI that researches and writes
-the briefing needs **write** access to it; the web app only needs **read**
-access. On every browser refresh the app rescans the folder, so a new file
-appears immediately — no restart, no rebuild, no import.
+the briefing needs **write** access to it; everything else only reads. When
+the finished file lands, `npm run build` publishes it: every page — front
+pages, section pages, articles, archive — regenerates into `dist/` in a
+moment. (`npm start` is a live preview that renders per request, handy for
+eyeballing an edition before building.)
 
 Where to write:
 
@@ -164,9 +175,11 @@ Copy-Item "$img\*" "$editions\images\2026-11-07\"
 Move-Item -Force $issue "$editions\2026-11-07.md"
 ```
 
-The next browser refresh shows the new edition on the front page and in the
-archive. If a file is malformed it is never silently dropped: the archive
-lists the filename and the reason, and every other issue stays readable.
+Then run `npm run build` — the front page and archive pick up the new
+edition, and the build output is swapped in atomically so a running server
+never catches a half-written site. If a file is malformed it is never
+silently dropped: the build warns about it, the archive lists the filename
+and the reason, and every other issue stays readable.
 
 ### Example researcher prompt (for your AI)
 
@@ -198,13 +211,15 @@ every run.
   (after path and symlink resolution, extension allowlist), or **hotlinked
   `https://` URLs** from the source pages. Local copies are preferred: a
   hotlinked image can break when the source rate-limits or moves it.
-- The `/media` route serves only files under `editions/images/`; path
-  traversal and symlink escapes are rejected.
-- Binds to `127.0.0.1` by default; LAN exposure is opt-in and firewall-scoped.
+- Only files under `editions/images/` are copied into `dist/media/`; path
+  traversal and symlink escapes are rejected at build time, and the served
+  site contains no request-time code at all.
+- The live preview (`npm start`) binds to `127.0.0.1` by default; LAN
+  exposure is opt-in and firewall-scoped.
 - No database, no cookies, no accounts. UI assets (fonts, artwork) are bundled
   locally — the only external requests a reader's browser makes are for
   hotlinked `https://` images that an edition itself points at
-  (OFL license in `devdaily/static/fonts/OFL.txt`).
+  (OFL license in `server/static/fonts/OFL.txt`).
 
 ## Tests
 
@@ -213,25 +228,29 @@ npm test
 ```
 
 Covers parsing (wrapped summaries, code fences, featured selection, duplicate
-slugs), URL identity, archive behavior, broken-file isolation, and the
-security rules above.
+slugs), URL identity, archive behavior, broken-file isolation, the security
+rules above, and the static build (pages, section pages, media copy,
+stale-output cleaning).
 
 ## Project structure
 
 ```
-server.js               start the server (Windows/Linux)
-server/                 the Express app
+build.js                static site builder (npm run build)
+server.js               live preview server (npm start; renders per request)
+server/                 shared rendering modules + the preview app
   parsing.js            frontmatter + structural Markdown parsing
   rendering.js          Markdown rendering, URL schemes, media resolution
   library.js            content-folder scanner with mtime cache
-  routes.js             pages + /media + /healthz
+  routes.js             page view-models + /media + /healthz
   app.js                Express app factory
   templates/            Nunjucks templates (front, article, archive, notices)
   static/css/paper.css  all styling; design tokens in :root
   static/fonts/         bundled Fraunces (OFL) + license
   static/img/           newspaper artwork (controller, coffee, paper grain)
 editions/               your content (bundled sample 2026-11-06 included)
+dist/                   the built site — what nginx (or any server) serves
 tests/                  node:test suite
-Dockerfile              Linux container for the home server
+nginx.conf              container nginx config (static site, 404 page)
+Dockerfile              nginx image for the home server
 docker-compose.yml      one-command deployment
 ```

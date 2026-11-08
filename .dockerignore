@@ -11,4 +11,9 @@ node_modules
 skills
 tests
 editions
+dist
+dist.staging
+server.js
+build.js
+server
 *.log
