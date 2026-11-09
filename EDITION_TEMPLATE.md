@@ -11,8 +11,9 @@ in America/Los_Angeles for the filename and edition_date. Coverage
 dates describe the reporting window.
 
 Cover practical AI workflows, Blender and 3D creation, 3D printing,
-and Unity and game-dev tools. Choose for practical or teaching value
-with no topic quotas. Favor shipped releases and clearly label beta,
+Unity and game-dev tools, and the video game industry — studio and
+platform business moves, not game releases. Choose for practical or
+teaching value with no topic quotas. Favor shipped releases and clearly label beta,
 preview, early access, and announcements. Verify dates, availability,
 and links using official sources where possible.
 
@@ -27,7 +28,7 @@ issue to publish, skip the file.
 
 ## [Specific story headline]
 
-**Section:** [AI Tools | 3D & Blender | Unity & Game Dev | 3D Printing | Other Tools]
+**Section:** [AI Tools | 3D & Blender | Unity & Game Dev | Game Industry | 3D Printing | Other Tools]
 **Featured:** [true or false]
 **News date:** [YYYY-MM-DD or Unknown]
 **Availability:** [Shipped | Beta | Preview | Early Access | Announced]
@@ -48,21 +49,21 @@ when no suitable image is available. Use the relevant news date above and
 explain multiple announcement and release dates in What changed.
 -->
 
-### About the tool
+### About
 
-[Explain what the tool does and who uses it in one or two sentences.]
+[Explain what this is about and who it affects in one or two sentences.]
 
-### What changed
+### What happened
 
-[Describe the update, dates, versions, and access requirements.]
+[Describe the event, dates, versions, and access requirements.]
 
 ### Why it matters
 
-[Explain a concrete impact on game dev, asset creation, or teaching.]
+[Explain a concrete impact on game dev, asset creation, the industry, or teaching.]
 
 ### Try or teach
 
-[Give one specific test or tutorial idea and what to look for.]
+[Optional — include when the reader can genuinely try the thing or turn it into a segment (tools, workflows, techniques, any beat); omit on general industry news with no hands-on angle.] [Give one specific test or tutorial idea and what to look for.]
 
 ### Limitations
 
