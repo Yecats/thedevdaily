@@ -6,9 +6,14 @@ coverage_end: "YYYY-MM-DD"
 ---
 
 <!--
-Write one file at editions/YYYY-MM-DD.md. Use the publication date
-in America/Los_Angeles for the filename and edition_date. Coverage
-dates describe the reporting window.
+Write one file per edition at editions/YYYY-MM-DD.md, or at
+editions/YYYY-MM-DD-HH.md when publishing more than once a day: HH
+is the publication hour in America/Los_Angeles, 00–23, zero-padded.
+The full filename stem is the edition id and must equal
+edition_date exactly (the date-only file is the day's earlier
+edition). Coverage dates describe the reporting window; they may
+be a YYYY-MM-DD date or a full UTC ISO 8601 timestamp. Keep
+edition_date and coverage values quoted — they are strings.
 
 Cover practical AI workflows, Blender and 3D creation, 3D printing,
 Unity and game-dev tools, and the video game industry — studio and

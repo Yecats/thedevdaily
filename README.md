@@ -141,19 +141,25 @@ File layout per issue:
 ```
 editions/
   2026-11-06.md                  <- the issue (frontmatter + stories)
+  2026-11-07-02.md               <- a second edition on one day (hour-tagged)
   images/2026-11-06/             <- that issue's images
     assetfurnace.webp
 ```
 
 Rules (full contract in `EDITION_TEMPLATE.md`):
 
-- Filename must be `YYYY-MM-DD.md` and must equal the `edition_date` in the
-  frontmatter; `coverage_start` must not be after `coverage_end`.
+- The edition id is the filename stem: `YYYY-MM-DD`, or `YYYY-MM-DD-HH`
+  (zero-padded hour 00–23, America/Los_Angeles) when publishing more than
+  once a day. It must equal the `edition_date` in the frontmatter; the
+  date-only file counts as the day's earlier edition, and each edition gets
+  its own `/issue/<id>/` URL. `coverage_start`/`coverage_end` accept a bare
+  `YYYY-MM-DD` date or a full UTC ISO 8601 timestamp, and must be ordered.
 - One H1 (issue heading), one H2 per story, H3s inside a story are its
   article sections. Labeled fields: `Section`, `Featured`, `News date`,
   `Availability`, `Tags`, `Summary`.
-- Images go in `editions/images/YYYY-MM-DD/` referenced relatively
-  (`./images/YYYY-MM-DD/name.webp`) — or the image line may hotlink a direct
+- Images go in `editions/images/<edition id>/` referenced relatively
+  (`./images/YYYY-MM-DD/name.webp`, or `./images/YYYY-MM-DD-12/...` for an
+  hour-tagged edition) — or the image line may hotlink a direct
   `https://` URL to the source's announcement graphic. Raw HTML is ignored
   (rendered as text), and only `http(s)` links, local images inside the
   images tree, and `https://` images are served.

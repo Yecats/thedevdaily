@@ -6,10 +6,10 @@ const express = require('express');
 const fs = require('fs');
 const path = require('path');
 
-const { slugify } = require('./parsing');
+const { slugify, EDITION_ID_RE } = require('./parsing');
 const {
-  formatLong,
-  formatMedium,
+  formatEditionLabel,
+  formatCoverage,
   formatNewsDate,
   renderBlock,
   renderInline,
@@ -35,8 +35,8 @@ function sectionIcon() {
 // helpers
 // ---------------------------------------------------------------------------
 
-function articleUrl(story, issueDateIso) {
-  return `/issue/${issueDateIso}/${story.slug}`;
+function articleUrl(story, issueId) {
+  return `/issue/${issueId}/${story.slug}`;
 }
 
 function storyImage(story, root, imagesRoot) {
@@ -55,6 +55,14 @@ function isValidDate(value) {
   );
 }
 
+/** A URL segment addresses an edition by its full id: date, or date + 00–23 hour. */
+function isValidEditionId(value) {
+  const match = EDITION_ID_RE.exec(value);
+  if (!match) return false;
+  if (!isValidDate(match[1])) return false;
+  return match[2] === undefined || Number(match[2]) <= 23;
+}
+
 /**
  * View-model for the newspaper front page of one issue.
  *
@@ -64,7 +72,7 @@ function isValidDate(value) {
  *
  * `sectionUrl` is optional and used by the static build (build.js): when it
  * is a function, TOC links point at pre-built per-section pages
- * (`/issue/<date>/section/<slug>/`) instead of `?section=` query URLs,
+ * (`/issue/<id>/section/<slug>/`) instead of `?section=` query URLs,
  * which a static file server would ignore.
  */
 function frontContext(
@@ -128,18 +136,18 @@ function frontContext(
 
   const storyView = (story) => ({
     story,
-    url: articleUrl(story, issue.date),
+    url: articleUrl(story, issue.id),
     image: storyImage(story, root, imagesRoot),
     icon: sectionIcon(),
   });
 
-  const editionNumber = library.editionNumber(issue.date);
+  const editionNumber = library.editionNumber(issue.id);
 
   return {
     issue,
     edition_number: editionNumber,
     edition_number_padded: String(editionNumber).padStart(3, '0'),
-    date_long: formatLong(issue.date),
+    date_long: formatEditionLabel(issue.id),
     date_iso: issue.date,
     featured: featured ? storyView(featured) : null,
     secondary: secondary.map(storyView),
@@ -149,7 +157,7 @@ function frontContext(
     filter_note: activeSlug
       ? { label: activeLabel, count: roundupStories.length, total: roundupAll.length }
       : null,
-    coverage: `${formatMedium(issue.coverage_start)} – ${formatMedium(issue.coverage_end)}`,
+    coverage: `${formatCoverage(issue.coverage_start)} – ${formatCoverage(issue.coverage_end)}`,
   };
 }
 
@@ -173,11 +181,14 @@ function articleContext(item, story, root, imagesRoot, library) {
     ? sanitizeFragment(renderBlock(story.preamble), root, imagesRoot)
     : null;
 
-  const editionNumber = library.editionNumber(item.date);
+  const editionNumber = library.editionNumber(item.id);
   return {
-    issue: { ...item, dateIso: item.date },
+    // The issue itself carries .id (full stem), .date (calendar day) and
+    // .hour; templates link back through .id so each edition of a day
+    // returns to its own front page.
+    issue: item,
     story,
-    article_url: articleUrl(story, item.date),
+    article_url: articleUrl(story, item.id),
     image: storyImage(story, root, imagesRoot),
     icon: sectionIcon(),
     news_date: formatNewsDate(story.news_date),
@@ -185,7 +196,7 @@ function articleContext(item, story, root, imagesRoot, library) {
     credit_html: creditHtml,
     preamble_html: preambleHtml,
     edition_number_padded: String(editionNumber).padStart(3, '0'),
-    date_long: formatLong(item.date),
+    date_long: formatEditionLabel(item.id),
     date_iso: item.date,
   };
 }
@@ -193,11 +204,11 @@ function articleContext(item, story, root, imagesRoot, library) {
 /** Row view-models for the archive page, newest first. */
 function archiveRows(library) {
   return library.issues().map((issue) => {
-    const number = library.editionNumber(issue.date);
+    const number = library.editionNumber(issue.id);
     return {
       issue,
-      url: `/issue/${issue.date}`,
-      label: formatLong(issue.date),
+      url: `/issue/${issue.id}`,
+      label: formatEditionLabel(issue.id),
       number,
       number_padded: String(number).padStart(3, '0'),
       story_count: issue.stories.length,
@@ -220,12 +231,12 @@ function createRouter(library, root, imagesRoot) {
     );
   });
 
-  r.get('/issue/:date', (req, res) => {
-    const iso = req.params.date;
-    if (!isValidDate(iso)) {
+  r.get('/issue/:id', (req, res) => {
+    const id = req.params.id;
+    if (!isValidEditionId(id)) {
       return res.status(404).render('missing.njk');
     }
-    const item = library.get(iso);
+    const item = library.get(id);
     if (item === null) {
       return res.status(404).render('missing.njk');
     }
@@ -235,16 +246,16 @@ function createRouter(library, root, imagesRoot) {
     const section = (req.query.section || '').trim().toLowerCase() || null;
     return res.render(
       'front.njk',
-      frontContext(item, library, root, imagesRoot, `/issue/${item.date}`, section)
+      frontContext(item, library, root, imagesRoot, `/issue/${item.id}`, section)
     );
   });
 
-  r.get('/issue/:date/:slug', (req, res) => {
-    const iso = req.params.date;
-    if (!isValidDate(iso)) {
+  r.get('/issue/:id/:slug', (req, res) => {
+    const id = req.params.id;
+    if (!isValidEditionId(id)) {
       return res.status(404).render('missing.njk');
     }
-    const item = library.get(iso);
+    const item = library.get(id);
     if (item === null) {
       return res.status(404).render('missing.njk');
     }
@@ -303,4 +314,5 @@ module.exports = {
   archiveRows,
   sectionIcon,
   isValidDate,
+  isValidEditionId,
 };

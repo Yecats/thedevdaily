@@ -50,13 +50,16 @@ function story(title, options = {}) {
     .replace('{extra}', extra);
 }
 
-function frontmatter(date, start, end) {
+function frontmatter(id, start, end) {
+  // Coverage defaults to the calendar day of the edition id: hour-tagged
+  // ids like `2026-11-10-02` have a date coverage window, not an id.
+  const day = String(id).slice(0, 10);
   return (
     '---\n' +
     'title: "The Dev Daily"\n' +
-    `edition_date: "${date}"\n` +
-    `coverage_start: "${start || date}"\n` +
-    `coverage_end: "${end || date}"\n` +
+    `edition_date: "${id}"\n` +
+    `coverage_start: "${start || day}"\n` +
+    `coverage_end: "${end || day}"\n` +
     '---\n'
   );
 }

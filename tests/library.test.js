@@ -77,3 +77,46 @@ test('edition numbers: oldest is one', () => {
   assert.equal(lib.editionNumber(issues[0].date), 3); // newest
   assert.equal(lib.editionNumber(issues.at(-1).date), 1); // oldest
 });
+
+// ---------------------------------------------------------------------------
+// multiple editions per day (hour-tagged ids)
+// ---------------------------------------------------------------------------
+
+test('same-day editions sort newest-first, day-only file is earliest', () => {
+  const dir = makeEditionsDir();
+  writeEdition(dir, '2026-11-09', story('Previous Day'));
+  writeEdition(dir, '2026-11-10', story('Day Edition'));
+  writeEdition(dir, '2026-11-10-02', story('Early Edition'));
+  writeEdition(dir, '2026-11-10-12', story('Midday Edition'));
+  const lib = new EditionLibrary(dir);
+  assert.deepEqual(lib.issues().map((i) => i.id), [
+    '2026-11-10-12',
+    '2026-11-10-02',
+    '2026-11-10',
+    '2026-11-09',
+  ]);
+  assert.equal(lib.newest().id, '2026-11-10-12');
+});
+
+test('lookup by full id; a bare date still finds the legacy file', () => {
+  const dir = makeEditionsDir();
+  writeEdition(dir, '2026-11-10', story('Day Edition', { featured: 'true' }));
+  writeEdition(dir, '2026-11-10-12', story('Midday Edition', { featured: 'true' }));
+  const lib = new EditionLibrary(dir);
+  assert.equal(lib.get('2026-11-10-12').stories[0].title, 'Midday Edition');
+  assert.equal(lib.get('2026-11-10').stories[0].title, 'Day Edition');
+  assert.equal(lib.get('2026-11-10-03'), null); // hour with no file of that id
+});
+
+test('edition numbers count every edition, not just calendar days', () => {
+  const dir = makeEditionsDir();
+  writeEdition(dir, '2026-11-09', story('A'));
+  writeEdition(dir, '2026-11-10', story('B'));
+  writeEdition(dir, '2026-11-10-02', story('C'));
+  writeEdition(dir, '2026-11-10-12', story('D'));
+  const lib = new EditionLibrary(dir);
+  assert.equal(lib.editionNumber('2026-11-09'), 1);
+  assert.equal(lib.editionNumber('2026-11-10'), 2);
+  assert.equal(lib.editionNumber('2026-11-10-02'), 3);
+  assert.equal(lib.editionNumber('2026-11-10-12'), 4);
+});

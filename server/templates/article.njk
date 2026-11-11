@@ -2,7 +2,7 @@
 {% block title %}{{ story.title }} · The Dev Daily{% endblock %}
 {% block body %}
 <article class="panel">
-  <a class="back" href="/issue/{{ issue.dateIso }}">← Back to edition</a>
+  <a class="back" href="/issue/{{ issue.id }}">← Back to edition</a>
   <div class="article-section"><span class="ico" aria-hidden="true">{{ icon }}</span>{{ story.section }}</div>
   {% if image %}
   <figure class="article-figure">

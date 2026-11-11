@@ -192,3 +192,105 @@ test('missing required key', () => {
   const parsed = parse(dir, '2026-11-06');
   assert.ok(parsed.reason.includes('coverage_start'));
 });
+
+// ---------------------------------------------------------------------------
+// hour-tagged editions: the id contract (YYYY-MM-DD or YYYY-MM-DD-HH)
+// ---------------------------------------------------------------------------
+
+test('hour-tagged edition parses with id, date and hour', () => {
+  const dir = makeEditionsDir();
+  writeEdition(dir, '2026-11-10-02', story('Early Story', { featured: 'true' }));
+  const parsed = parse(dir, '2026-11-10-02');
+  assert.ok(!parsed.reason, parsed.reason);
+  assert.equal(parsed.id, '2026-11-10-02');
+  assert.equal(parsed.date, '2026-11-10');
+  assert.equal(parsed.hour, 2);
+});
+
+test('edition hour 25 is a broken issue, not an edition', () => {
+  const dir = makeEditionsDir();
+  writeEdition(dir, '2026-11-10-25', story('Impossible'));
+  const parsed = parse(dir, '2026-11-10-25');
+  assert.ok(parsed.reason);
+  assert.match(parsed.reason, /hour/i);
+});
+
+test('hour-tagged file needs the full stem as edition_date', () => {
+  const dir = makeEditionsDir();
+  const fs = require('fs');
+  fs.writeFileSync(
+    path.join(dir, '2026-11-10-02.md'),
+    '---\ntitle: "T"\nedition_date: "2026-11-10"\ncoverage_start: "2026-11-10"\ncoverage_end: "2026-11-10"\n---\n' + story('A'),
+    'utf-8'
+  );
+  const parsed = parse(dir, '2026-11-10-02');
+  assert.ok(parsed.reason.includes('does not match'));
+});
+
+test('coverage accepts a bare date and a timestamp, kept raw', () => {
+  const dir = makeEditionsDir();
+  const fs = require('fs');
+  fs.writeFileSync(
+    path.join(dir, '2026-11-10-12.md'),
+    '---\ntitle: "T"\nedition_date: "2026-11-10-12"\ncoverage_start: "2026-11-09"\ncoverage_end: "2026-11-10T09:02:11Z"\n---\n' + story('A'),
+    'utf-8'
+  );
+  const parsed = parse(dir, '2026-11-10-12');
+  assert.ok(!parsed.reason, parsed.reason);
+  assert.equal(parsed.coverage_start, '2026-11-09');
+  assert.equal(parsed.coverage_end, '2026-11-10T09:02:11Z');
+});
+
+test('mixed-format coverage order is validated by instant, not string', () => {
+  const dir = makeEditionsDir();
+  const fs = require('fs');
+  // 23:00 on Nov 10 at UTC-5 is already 04:00 UTC on Nov 11 — after
+  // coverage_end — even though the raw text sorts before "2026-11-11…".
+  fs.writeFileSync(
+    path.join(dir, '2026-11-11.md'),
+    '---\ntitle: "T"\nedition_date: "2026-11-11"\ncoverage_start: "2026-11-10T23:00:00-05:00"\ncoverage_end: "2026-11-11T00:00:00Z"\n---\n' + story('A'),
+    'utf-8'
+  );
+  const parsed = parse(dir, '2026-11-11');
+  assert.ok(parsed.reason && parsed.reason.toLowerCase().includes('coverage'));
+});
+
+test('equal coverage instants in different formats are valid', () => {
+  const dir = makeEditionsDir();
+  const fs = require('fs');
+  fs.writeFileSync(
+    path.join(dir, '2026-11-10.md'),
+    '---\ntitle: "T"\nedition_date: "2026-11-10"\ncoverage_start: "2026-11-10"\ncoverage_end: "2026-11-10T00:00:00Z"\n---\n' + story('A'),
+    'utf-8'
+  );
+  const parsed = parse(dir, '2026-11-10');
+  assert.ok(!parsed.reason, parsed.reason);
+});
+
+test('bogus calendar coverage value is broken', () => {
+  const dir = makeEditionsDir();
+  const fs = require('fs');
+  // November 31 silently rolls into December under Date.parse alone.
+  fs.writeFileSync(
+    path.join(dir, '2026-11-10.md'),
+    '---\ntitle: "T"\nedition_date: "2026-11-10"\ncoverage_start: "2026-11-31"\ncoverage_end: "2026-12-01"\n---\n' + story('A'),
+    'utf-8'
+  );
+  const parsed = parse(dir, '2026-11-10');
+  assert.ok(parsed.reason && parsed.reason.includes('coverage_start'));
+});
+
+test('unquoted YAML date scalars round-trip to the authored day', () => {
+  const dir = makeEditionsDir();
+  const fs = require('fs');
+  // js-yaml hands back a Date for bare date-like scalars; normalizing via
+  // toISOString used to shift the day on machines west of Greenwich.
+  fs.writeFileSync(
+    path.join(dir, '2026-11-10.md'),
+    '---\ntitle: "T"\nedition_date: 2026-11-10\ncoverage_start: 2026-11-09\ncoverage_end: 2026-11-10T09:02:11Z\n---\n' + story('A'),
+    'utf-8'
+  );
+  const parsed = parse(dir, '2026-11-10');
+  assert.ok(!parsed.reason, parsed.reason);
+  assert.equal(parsed.coverage_start, '2026-11-09');
+});

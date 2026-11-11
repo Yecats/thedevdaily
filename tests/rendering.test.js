@@ -10,6 +10,8 @@ const path = require('path');
 const {
   formatLong,
   formatMedium,
+  formatEditionLabel,
+  formatCoverage,
   formatNewsDate,
   renderBlock,
   renderInline,
@@ -28,6 +30,22 @@ test('date formatting is deterministic', () => {
   assert.equal(formatMedium('2026-01-01'), 'Jan 1, 2026');
   assert.equal(formatNewsDate('Unknown'), 'Unknown');
   assert.equal(formatNewsDate('2026-11-03'), 'Nov 3, 2026');
+});
+
+test('edition labels for date-only and hour-tagged ids', () => {
+  assert.equal(formatEditionLabel('2026-11-10'), 'November 10, 2026');
+  assert.equal(formatEditionLabel('2026-11-10-02'), 'November 10, 2026 · 2 AM');
+  assert.equal(formatEditionLabel('2026-11-10-12'), 'November 10, 2026 · 12 PM');
+  assert.equal(formatEditionLabel('2026-11-10-00'), 'November 10, 2026 · 12 AM');
+  assert.equal(formatEditionLabel('2026-11-10-23'), 'November 10, 2026 · 11 PM');
+  assert.equal(formatEditionLabel('nonsense'), 'nonsense');
+  assert.equal(formatEditionLabel('2026-11-10-25'), '2026-11-10-25'); // out-of-range hour passes through
+});
+
+test('coverage display handles bare dates and ISO timestamps', () => {
+  assert.equal(formatCoverage('2026-11-09'), 'Nov 9, 2026');
+  assert.equal(formatCoverage('2026-11-10T09:02:11Z'), 'Nov 10, 2026 09:02 UTC');
+  assert.equal(formatCoverage('2026-11-10T23:00:00-05:00'), 'Nov 11, 2026 04:00 UTC');
 });
 
 // --------------------------------------------------------------------------

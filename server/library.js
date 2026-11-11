@@ -4,8 +4,9 @@
  * Edition library: scans the content folder and caches parsed issues.
  *
  * The folder is rescanned on every request; unchanged files (same mtime and
- * size) are served from the parse cache, so a new YYYY-MM-DD.md file appears
- * on browser refresh without a server restart or rebuild.
+ * size) are served from the parse cache, so a new edition file —
+ * YYYY-MM-DD.md or hour-tagged YYYY-MM-DD-HH.md — appears on browser
+ * refresh without a server restart or rebuild.
  */
 
 const fs = require('fs');
@@ -54,9 +55,13 @@ class EditionLibrary {
       parsed.push(item);
     }
 
+    // Sort by edition id (`YYYY-MM-DD` or `YYYY-MM-DD-HH`) newest-first;
+    // for ids of this shape plain string order is chronological, and the
+    // date-only file of a day sorts before (older than) its hour-tagged
+    // siblings.
     const valid = parsed
       .filter((item) => item.stories !== undefined)
-      .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
+      .sort((a, b) => (a.id < b.id ? 1 : a.id > b.id ? -1 : 0));
     const broken = parsed
       .filter((item) => item.reason !== undefined)
       .sort((a, b) => (a.filename < b.filename ? 1 : a.filename > b.filename ? -1 : 0));
@@ -78,21 +83,27 @@ class EditionLibrary {
     return null;
   }
 
-  /** The issue for an ISO date, its broken file entry, or null. */
-  get(isoDate) {
-    const filename = `${isoDate}.md`;
+  /**
+   * The issue for an edition id (`2026-11-10-02`), its broken file entry,
+   * or null. A bare `2026-11-10` resolves to the legacy date-only file of
+   * that day, whose id is exactly that date; hour-tagged siblings are only
+   * reachable by their full id.
+   */
+  get(id) {
+    const filename = `${id}.md`;
     let brokenMatch = null;
     for (const item of this.scan()) {
-      if (item.stories !== undefined && item.date === isoDate) return item;
+      if (item.stories !== undefined && item.id === id) return item;
       if (item.reason !== undefined && item.filename === filename) brokenMatch = item;
     }
     return brokenMatch;
   }
 
-  /** Display-only number: the oldest published issue is #1. */
-  editionNumber(issueDateIso) {
-    const dates = this.issues().map((i) => i.date).sort();
-    const index = dates.indexOf(issueDateIso);
+  /** Display-only number: the oldest published issue is #1. Each edition
+   *  of a day — the date-only file and every hour-tagged sibling — counts. */
+  editionNumber(issueId) {
+    const ids = this.issues().map((i) => i.id).sort();
+    const index = ids.indexOf(issueId);
     return index === -1 ? 0 : index + 1;
   }
 }

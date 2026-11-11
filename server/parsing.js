@@ -21,7 +21,12 @@ const fs = require('fs');
 const path = require('path');
 const yaml = require('js-yaml');
 
-const EDITION_FILENAME_RE = /^\d{4}-\d{2}-\d{2}\.md$/;
+// Edition id: `YYYY-MM-DD` or `YYYY-MM-DD-HH` (hour 00–23, LA-local,
+// zero-padded). The two-digit shape is checked here; the 00–23 range is
+// checked where the id is validated, so an out-of-range hour surfaces as a
+// broken file with a clear reason instead of vanishing from the paper.
+const EDITION_FILENAME_RE = /^(\d{4}-\d{2}-\d{2})(?:-(\d{2}))?\.md$/;
+const EDITION_ID_RE = /^(\d{4}-\d{2}-\d{2})(?:-(\d{2}))?$/;
 
 const HEADING_RE = /^(#{1,6})\s+(.+?)\s*#*\s*$/;
 const FENCE_RE = /^ {0,3}(`{3,}|~{3,})/;
@@ -31,6 +36,15 @@ const IMAGE_LINE_RE = /^\s*!\[([^\]]*)\]\(\s*(\S+?)(?:\s+"[^"]*")?\s*\)\s*$/;
 const CREDIT_RE = /^\s*\*\s*(Image credit\b.*)$/i;
 const FRONTMATTER_RE = /^---[ \t]*\r?\n([\s\S]*?)\r?\n---[ \t]*\r?\n?([\s\S]*)$/;
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+// Full ISO 8601 timestamp with an explicit zone (Z or ±HH:MM). The instant
+// is verified by round-trip below, since Date.parse rolls bogus calendar
+// values over (2026-11-31 silently becomes December 1).
+const ISO_TIMESTAMP_RE =
+  /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?(?:\.(\d{1,9}))?(Z|([+-])(\d{2}):(\d{2}))$/;
+
+function pad2(n) {
+  return String(n).padStart(2, '0');
+}
 
 const REQUIRED_META_KEYS = ['title', 'edition_date', 'coverage_start', 'coverage_end'];
 
@@ -68,19 +82,114 @@ class BrokenIssue {
 // frontmatter
 // ---------------------------------------------------------------------------
 
-/** Accept a YAML string or Date; return an ISO `YYYY-MM-DD` string. */
-function asIsoDate(value, label) {
+/**
+ * Validate an edition id: `YYYY-MM-DD` or `YYYY-MM-DD-HH`, never coerced to
+ * a Date. YAML turns a bare `2026-11-10` scalar into a Date at UTC midnight,
+ * so a Date is normalized back with UTC calendar parts — that is exactly the
+ * day the author wrote, on any machine — and a Date carrying any time of
+ * day cannot name an edition at all.
+ */
+function asEditionId(value, label) {
   if (value instanceof Date) {
-    return value.toISOString().slice(0, 10);
+    const atMidnightUtc =
+      value.getUTCHours() === 0 &&
+      value.getUTCMinutes() === 0 &&
+      value.getUTCSeconds() === 0 &&
+      value.getUTCMilliseconds() === 0;
+    if (atMidnightUtc) {
+      return `${value.getUTCFullYear()}-${pad2(value.getUTCMonth() + 1)}-${pad2(value.getUTCDate())}`;
+    }
+    throw new EditionError(
+      `${label} must be a YYYY-MM-DD or YYYY-MM-DD-HH edition id, got a value with a time of day.`
+    );
   }
   if (typeof value === 'string') {
     const trimmed = value.trim();
-    if (ISO_DATE_RE.test(trimmed)) {
+    const match = EDITION_ID_RE.exec(trimmed);
+    if (match) {
+      if (match[2] !== undefined && Number(match[2]) > 23) {
+        throw new EditionError(
+          `${label} hour ${match[2]} is out of range (must be 00–23).`
+        );
+      }
       return trimmed;
     }
   }
   throw new EditionError(
-    `${label} must be a YYYY-MM-DD calendar date, got ${JSON.stringify(value)}`
+    `${label} must be a YYYY-MM-DD or YYYY-MM-DD-HH edition id, got ${JSON.stringify(value)}`
+  );
+}
+
+/**
+ * Epoch milliseconds for a bare `YYYY-MM-DD` date (UTC midnight) or a full
+ * ISO 8601 timestamp, or null when the value is not a real instant.
+ * Calendar fields are verified by round-trip; Date.parse alone would accept
+ * things like November 31 by rolling them into December.
+ */
+function toInstant(raw) {
+  const dateMatch = ISO_DATE_RE.exec(raw);
+  if (dateMatch) {
+    const [y, m, d] = raw.split('-').map(Number);
+    const t = Date.UTC(y, m - 1, d);
+    const check = new Date(t);
+    const real =
+      check.getUTCFullYear() === y &&
+      check.getUTCMonth() === m - 1 &&
+      check.getUTCDate() === d;
+    return real ? t : null;
+  }
+  const tsMatch = ISO_TIMESTAMP_RE.exec(raw);
+  if (!tsMatch) return null;
+  const [y, mo, d, hh, mi] = tsMatch.slice(1, 6).map(Number);
+  const ss = tsMatch[6] === undefined ? 0 : Number(tsMatch[6]);
+  const ms = tsMatch[7] ? Number((tsMatch[7] + '00').slice(0, 3)) : 0;
+  let offsetMs = 0;
+  if (tsMatch[8] !== 'Z') {
+    const offH = Number(tsMatch[10]);
+    const offM = Number(tsMatch[11]);
+    if (offH > 23 || offM > 59) return null;
+    offsetMs = (offH * 60 + offM) * 60000 * (tsMatch[9] === '-' ? -1 : 1);
+  }
+  const wall = Date.UTC(y, mo - 1, d, hh, mi, ss, ms);
+  const check = new Date(wall);
+  const real =
+    check.getUTCFullYear() === y &&
+    check.getUTCMonth() === mo - 1 &&
+    check.getUTCDate() === d &&
+    check.getUTCHours() === hh &&
+    check.getUTCMinutes() === mi &&
+    check.getUTCSeconds() === ss &&
+    check.getUTCMilliseconds() === ms;
+  return real ? wall - offsetMs : null;
+}
+
+/**
+ * Validate a coverage bound: a bare `YYYY-MM-DD` date OR a full ISO 8601
+ * timestamp. Returns the raw string (for display, kept exactly as authored)
+ * and the parsed instant (for ordering, since old date-only and new
+ * timestamp values can never be compared as strings).
+ */
+function asCoverage(value, label) {
+  if (value instanceof Date) {
+    // js-yaml reads a bare `2026-11-09` scalar as midnight UTC; the UTC
+    // parts are the day as authored, on every machine.
+    const atMidnightUtc =
+      value.getUTCHours() === 0 &&
+      value.getUTCMinutes() === 0 &&
+      value.getUTCSeconds() === 0 &&
+      value.getUTCMilliseconds() === 0;
+    const raw = atMidnightUtc
+      ? `${value.getUTCFullYear()}-${pad2(value.getUTCMonth() + 1)}-${pad2(value.getUTCDate())}`
+      : value.toISOString();
+    return { raw, instant: value.getTime() };
+  }
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    const instant = toInstant(trimmed);
+    if (instant !== null) return { raw: trimmed, instant };
+  }
+  throw new EditionError(
+    `${label} must be a YYYY-MM-DD date or an ISO 8601 timestamp, got ${JSON.stringify(value)}`
   );
 }
 
@@ -360,20 +469,39 @@ function parseEdition(filePath) {
 
 function parseEditionText(text, filePath) {
   const filename = path.basename(filePath);
-  const filenameDate = filename.slice(0, 10); // guaranteed by EDITION_FILENAME_RE
-  const { meta, body } = parseFrontmatter(text, filename);
-
-  const editionDate = asIsoDate(meta['edition_date'], 'edition_date');
-  if (editionDate !== filenameDate) {
+  const nameMatch = EDITION_FILENAME_RE.exec(filename);
+  if (!nameMatch) {
     throw new EditionError(
-      `edition_date ${editionDate} does not match the filename date ${filenameDate}.`
+      'Filename must be YYYY-MM-DD.md or YYYY-MM-DD-HH.md (hour 00–23), ' +
+        `got '${filename}'.`
     );
   }
-  const coverageStart = asIsoDate(meta['coverage_start'], 'coverage_start');
-  const coverageEnd = asIsoDate(meta['coverage_end'], 'coverage_end');
-  if (coverageStart > coverageEnd) {
+  // Full stem without the extension: the edition id, `2026-11-10` or
+  // `2026-11-10-02`. Lexicographic order on the id is chronological, with
+  // the date-only file treated as the day's earlier edition.
+  const stem = nameMatch[1] + (nameMatch[2] === undefined ? '' : `-${nameMatch[2]}`);
+  const hour = nameMatch[2] === undefined ? null : Number(nameMatch[2]);
+  if (hour !== null && hour > 23) {
     throw new EditionError(
-      `coverage_start ${coverageStart} is after coverage_end ${coverageEnd}.`
+      `Edition hour ${nameMatch[2]} in '${filename}' is out of range (must be 00–23).`
+    );
+  }
+  const { meta, body } = parseFrontmatter(text, filename);
+
+  const editionDate = asEditionId(meta['edition_date'], 'edition_date');
+  if (editionDate !== stem) {
+    throw new EditionError(
+      `edition_date ${editionDate} does not match the filename edition ${stem}.`
+    );
+  }
+  const coverageStart = asCoverage(meta['coverage_start'], 'coverage_start');
+  const coverageEnd = asCoverage(meta['coverage_end'], 'coverage_end');
+  // Order by instants, not strings: a bare date and a timestamp in the same
+  // file are both legal, and `2026-11-10T23:00:00-05:00` < `2026-11-11` as
+  // text even though its instant is later.
+  if (coverageStart.instant > coverageEnd.instant) {
+    throw new EditionError(
+      `coverage_start ${coverageStart.raw} is after coverage_end ${coverageEnd.raw}.`
     );
   }
   const title = String(meta['title']).trim();
@@ -389,11 +517,15 @@ function parseEditionText(text, filePath) {
 
   return new Issue({
     filename,
-    date: filenameDate,
+    // Full edition id (`2026-11-10-02`) for URLs and lookups; the calendar
+    // day and hour for grouping and the masthead day.
+    id: stem,
+    date: nameMatch[1],
+    hour,
     title,
     heading: heading || title,
-    coverage_start: coverageStart,
-    coverage_end: coverageEnd,
+    coverage_start: coverageStart.raw,
+    coverage_end: coverageEnd.raw,
     stories,
     featured,
   });
@@ -401,6 +533,7 @@ function parseEditionText(text, filePath) {
 
 module.exports = {
   EDITION_FILENAME_RE,
+  EDITION_ID_RE,
   EditionError,
   StorySection,
   Story,

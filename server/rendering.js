@@ -40,6 +40,10 @@ const IMAGE_EXTENSIONS = new Set([
 ]);
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const MONTHS_FULL = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+];
 // getUTCDay() is Sunday-first; Python's weekday() was Monday-first.
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -93,6 +97,48 @@ function formatLong(iso) {
 function formatMedium(iso) {
   const [y, m, d] = iso.split('-').map(Number);
   return `${MONTHS[m - 1]} ${d}, ${y}`;
+}
+
+// `2026-11-10-02` and `-12` are LA-local publishing hours; the label is a
+// pure string read of that number (no Date involved), so it cannot shift.
+function amPm(hour) {
+  if (hour === 0) return '12 AM';
+  if (hour < 12) return `${hour} AM`;
+  if (hour === 12) return '12 PM';
+  return `${hour - 12} PM`;
+}
+
+/** Human label for an edition id, used in the masthead, TOC and archive. */
+function formatEditionLabel(id) {
+  const text = String(id).trim();
+  const match = /^(\d{4})-(\d{2})-(\d{2})(?:-(\d{2}))?$/.exec(text);
+  if (!match) return text;
+  const month = Number(match[2]);
+  const hour = match[4] === undefined ? null : Number(match[4]);
+  if (month < 1 || month > 12 || (hour !== null && hour > 23)) return text;
+  const base = `${MONTHS_FULL[month - 1]} ${Number(match[3])}, ${match[1]}`;
+  return hour === null ? base : `${base} · ${amPm(hour)}`;
+}
+
+// A coverage bound is either a bare calendar date or a full ISO 8601
+// timestamp with an explicit zone; a timestamp is displayed in UTC so the
+// window reads the same on every machine.
+const COVERAGE_TIMESTAMP_RE =
+  /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/;
+
+function formatCoverage(raw) {
+  const text = String(raw).trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(text)) return formatMedium(text);
+  if (COVERAGE_TIMESTAMP_RE.test(text)) {
+    const instant = Date.parse(text);
+    if (!Number.isNaN(instant)) {
+      const d = new Date(instant);
+      const hh = String(d.getUTCHours()).padStart(2, '0');
+      const mm = String(d.getUTCMinutes()).padStart(2, '0');
+      return `${MONTHS[d.getUTCMonth()]} ${d.getUTCDate()}, ${d.getUTCFullYear()} ${hh}:${mm} UTC`;
+    }
+  }
+  return text;
 }
 
 function formatNewsDate(raw) {
@@ -217,6 +263,8 @@ function externalHttpUrl(src) {
 module.exports = {
   formatLong,
   formatMedium,
+  formatEditionLabel,
+  formatCoverage,
   formatNewsDate,
   renderInline,
   renderBlock,

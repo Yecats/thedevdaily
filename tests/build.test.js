@@ -130,6 +130,50 @@ test('site-base prefixes internal URLs for subfolder hosting', () => {
   assert.equal(read(out2, 'index.html'), home);
 });
 
+test('two editions of one day build to distinct issue folders', () => {
+  const dir = makeEditionsDir();
+  writeEdition(dir, '2026-11-10', story('Day Edition', { featured: 'true' }));
+  writeEdition(dir, '2026-11-10-02', story('Early Edition', { featured: 'true' }));
+  writeEdition(
+    dir,
+    '2026-11-10-12',
+    story('Midday Edition', { featured: 'true' }) + story('Midday Extra')
+  );
+  const { code, out } = build(dir);
+  assert.equal(code, 0);
+
+  // Each edition keeps its own front page: no shared day folder to overwrite.
+  const day = read(out, 'issue/2026-11-10/index.html');
+  const early = read(out, 'issue/2026-11-10-02/index.html');
+  const midday = read(out, 'issue/2026-11-10-12/index.html');
+  assert.ok(day.includes('Day Edition') && !day.includes('Midday Edition'));
+  assert.ok(early.includes('Early Edition') && !early.includes('Midday Edition'));
+  assert.ok(midday.includes('Midday Edition') && !midday.includes('Early Edition'));
+
+  // The home page shows the newest edition by id: the 12 one.
+  const home = read(out, 'index.html');
+  assert.ok(home.includes('Midday Edition') && home.includes('November 10, 2026 · 12 PM'));
+  assert.ok(!home.includes('Early Edition'));
+  assert.ok(home.includes('href="/issue/2026-11-10-12/section/ai-tools/#roundup"'));
+
+  // Section and article pages are built under each edition id.
+  assert.ok(
+    fs.existsSync(path.join(out, 'issue', '2026-11-10-02', 'section', 'ai-tools', 'index.html'))
+  );
+  const article = read(out, 'issue/2026-11-10-12/midday-extra/index.html');
+  assert.ok(article.includes('Midday Extra'));
+  assert.ok(article.includes('href="/issue/2026-11-10-12"'));
+
+  // The archive lists all three editions separately, newest-first, labelled.
+  const archive = read(out, 'archive/index.html');
+  const noonPos = archive.indexOf('November 10, 2026 · 12 PM</strong>');
+  const twoPos = archive.indexOf('November 10, 2026 · 2 AM</strong>');
+  const dayPos = archive.indexOf('November 10, 2026</strong>');
+  assert.ok(noonPos > -1 && twoPos > -1 && dayPos > -1);
+  assert.ok(noonPos < twoPos && twoPos < dayPos);
+  assert.ok(archive.includes('Edition #003') && archive.includes('Edition #001'));
+});
+
 test('rebuilding replaces stale output entirely', () => {
   const dir = makeEditionsDir();
   writeEdition(dir, '2026-11-06', story('A'));

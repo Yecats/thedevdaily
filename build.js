@@ -132,7 +132,9 @@ function main(argv = process.argv.slice(2)) {
     // Per-section front pages keep the Roundup filter working without query
     // strings, which a static file server would ignore. Every page of an
     // issue links its TOC at those pre-built pages.
-    const sectionUrlFor = (issueDate) => (slug) => `/issue/${issueDate}/section/${slug}/`;
+    // Output is keyed by the full edition id, not the calendar day, so two
+    // editions published on one day never share (overwrite) a folder.
+    const sectionUrlFor = (issueId) => (slug) => `/issue/${issueId}/section/${slug}/`;
 
     // Home page: the newest issue, TOC linking into its section pages.
     const newest = library.newest();
@@ -143,7 +145,7 @@ function main(argv = process.argv.slice(2)) {
         'index.html',
         env.render(
           'front.njk',
-          frontContext(newest, library, root, imagesRoot, '/', null, sectionUrlFor(newest.date))
+          frontContext(newest, library, root, imagesRoot, '/', null, sectionUrlFor(newest.id))
         )
       );
     }
@@ -151,10 +153,10 @@ function main(argv = process.argv.slice(2)) {
     // One front page per issue, plus one section page per (issue, section).
     let sectionPages = 0;
     for (const item of issues) {
-      const baseUrl = `/issue/${item.date}/`;
-      const sectionUrl = sectionUrlFor(item.date);
+      const baseUrl = `/issue/${item.id}/`;
+      const sectionUrl = sectionUrlFor(item.id);
       const ctx = frontContext(item, library, root, imagesRoot, baseUrl, null, sectionUrl);
-      write(`issue/${item.date}/index.html`, env.render('front.njk', ctx));
+      write(`issue/${item.id}/index.html`, env.render('front.njk', ctx));
       for (const entry of ctx.toc) {
         const sectionCtx = frontContext(
           item,
@@ -166,7 +168,7 @@ function main(argv = process.argv.slice(2)) {
           sectionUrl
         );
         write(
-          `issue/${item.date}/section/${entry.slug}/index.html`,
+          `issue/${item.id}/section/${entry.slug}/index.html`,
           env.render('front.njk', sectionCtx)
         );
         sectionPages += 1;
@@ -178,7 +180,7 @@ function main(argv = process.argv.slice(2)) {
     for (const item of issues) {
       for (const story of item.stories) {
         write(
-          `issue/${item.date}/${story.slug}/index.html`,
+          `issue/${item.id}/${story.slug}/index.html`,
           env.render('article.njk', articleContext(item, story, root, imagesRoot, library))
         );
         articlePages += 1;

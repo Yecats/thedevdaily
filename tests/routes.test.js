@@ -31,7 +31,7 @@ test('home serves newest issue', async () => {
   assert.ok(html.includes('Backup Story')); // roundup keeps remaining stories discoverable
   assert.ok(!html.includes('Older Story')); // another issue's story stays in its issue
   assert.ok(html.includes('Edition #002'));
-  assert.ok(html.includes('Fri, Nov 6, 2026'));
+  assert.ok(html.includes('November 6, 2026'));
   assert.ok(html.includes('/issue/2026-11-06/newer-story'));
   await client.close();
 });
@@ -135,12 +135,12 @@ test('archive lists issues newest first with numbers', async () => {
   writeEdition(dir, '2026-11-06', story('B'));
   const client = await makeClient(dir);
   const html = (await client.get('/archive')).text;
-  const newerPos = html.indexOf('Fri, Nov 6, 2026');
-  const olderPos = html.indexOf('Wed, Nov 4, 2026');
+  const newerPos = html.indexOf('November 6, 2026');
+  const olderPos = html.indexOf('November 4, 2026');
   assert.ok(newerPos !== -1 && olderPos !== -1);
   assert.ok(newerPos < olderPos);
   assert.ok(html.includes('Edition #002') && html.includes('Edition #001'));
-  assert.ok(html.includes('Wed, Nov 4, 2026'));
+  assert.ok(html.includes('November 4, 2026'));
   await client.close();
 });
 
@@ -371,5 +371,71 @@ test('filter keeps lead and cards visible', async () => {
   const roundup = roundupHtml(html);
   assert.ok(roundup.includes('Extra AI'));
   assert.ok(!roundup.includes('Featured Print') && !roundup.includes('Card AI'));
+  await client.close();
+});
+
+// --------------------------------------------------------------------------
+// multiple editions per day (hour-tagged ids)
+// --------------------------------------------------------------------------
+
+test('hour-tagged editions get their own urls, labels and articles', async () => {
+  const dir = makeEditionsDir();
+  writeEdition(dir, '2026-11-10', story('Day Edition', { featured: 'true' }));
+  writeEdition(dir, '2026-11-10-02', story('Early Edition', { featured: 'true' }));
+  writeEdition(
+    dir,
+    '2026-11-10-12',
+    story('Midday Edition', { featured: 'true' }) + story('Midday Extra')
+  );
+  const client = await makeClient(dir);
+
+  const home = (await client.get('/')).text;
+  assert.ok(home.includes('Midday Edition')); // newest by id is the -12 edition
+  assert.ok(!home.includes('Early Edition'));
+  assert.ok(home.includes('November 10, 2026 · 12 PM'));
+  assert.ok(home.includes('Edition #003')); // every edition counts, not every day
+
+  const early = (await client.get('/issue/2026-11-10-02')).text;
+  assert.ok(early.includes('Early Edition') && early.includes('November 10, 2026 · 2 AM'));
+
+  const legacy = (await client.get('/issue/2026-11-10')).text;
+  assert.ok(legacy.includes('Day Edition') && !legacy.includes('Midday Edition'));
+  assert.ok(legacy.includes('November 10, 2026')); // no hour suffix on the day-only file
+
+  const article = (await client.get('/issue/2026-11-10-12/midday-extra')).text;
+  assert.ok(article.includes('Midday Extra'));
+  assert.ok(article.includes('href="/issue/2026-11-10-12"')); // back link to its own edition
+
+  const archive = (await client.get('/archive')).text;
+  const noonPos = archive.indexOf('November 10, 2026 · 12 PM</strong>');
+  const twoPos = archive.indexOf('November 10, 2026 · 2 AM</strong>');
+  const dayPos = archive.indexOf('November 10, 2026</strong>');
+  assert.ok(noonPos > -1 && twoPos > -1 && dayPos > -1); // three separate rows
+  assert.ok(noonPos < twoPos && twoPos < dayPos); // newest-first
+  await client.close();
+});
+
+test('out-of-range and missing edition hours are friendly 404s', async () => {
+  const dir = makeEditionsDir();
+  writeEdition(dir, '2026-11-10-02', story('Early Edition', { featured: 'true' }));
+  const client = await makeClient(dir);
+  for (const p of ['/issue/2026-11-10-25', '/issue/2026-11-10-03', '/issue/2026-11-10']) {
+    assert.equal((await client.get(p)).status, 404, p); // 25: invalid id; 03/day: no such edition
+  }
+  await client.close();
+});
+
+test('broken hour-tagged file reports at its id url', async () => {
+  const dir = makeEditionsDir();
+  fs.writeFileSync(
+    path.join(dir, '2026-11-10-02.md'),
+    '---\ntitle: "T"\nedition_date: "2026-11-10"\ncoverage_start: "2026-11-10"\ncoverage_end: "2026-11-10"\n---\n',
+    'utf-8'
+  );
+  const client = await makeClient(dir);
+  const response = await client.get('/issue/2026-11-10-02');
+  assert.equal(response.status, 404);
+  assert.ok(response.text.includes('2026-11-10-02.md'));
+  assert.ok(response.text.includes('does not match'));
   await client.close();
 });
